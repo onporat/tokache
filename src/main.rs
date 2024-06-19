@@ -2,6 +2,7 @@ use anyhow::{anyhow, Context, Result};
 use chrono::{DateTime, Utc};
 use clap::Parser;
 use config::Config;
+use serde_json_path::JsonPath;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
@@ -141,17 +142,17 @@ fn is_ttl_expiered(file_meta: fs::Metadata, ttl: i64, now: DateTime<Utc>) -> Res
     Ok(sec_diff > ttl)
 }
 
-fn is_json_expiered(json: &str, key: &str, now: DateTime<Utc>) -> Result<bool> {
-    let jq_key = if key.starts_with('.') {
-        String::from(key)
+fn is_json_expiered(json_str: &str, key: &str, now: DateTime<Utc>) -> Result<bool> {
+    let json_path = if key.starts_with('.') {
+        format!("${key}")
     } else {
-        format!(".{key}")
+        format!("$.{key}")
     };
-    let binding = j9::run(&jq_key, json).context("Failed to parse json")?;
-    let value_with_quotes = binding
-        .first()
-        .ok_or_else(|| anyhow!("Failed to get json key"))?;
-    let date_str = &value_with_quotes[1..value_with_quotes.len() - 1];
+    let json_obj: serde_json::Value =
+        serde_json::from_str(json_str).context("Failed to parse json")?;
+    let path = JsonPath::parse(&json_path)?;
+    let node = path.query(&json_obj).exactly_one()?;
+    let date_str = node.as_str().unwrap();
     let expiration =
         dateparser::parse(date_str).context(format!("Failed to parse date {date_str}"))?;
     Ok(now >= expiration)
