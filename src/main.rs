@@ -31,18 +31,18 @@ fn main() -> Result<()> {
     let settings = Config::builder()
         .set_default(
             "cache_dir",
-            home_dir.join(".cache/cacheme").display().to_string(),
+            home_dir.join(".cache/tokache").display().to_string(),
         )?
         .add_source(
             config::File::with_name(
                 &home_dir
-                    .join(".local/config/cacheme/settings")
+                    .join(".local/config/tokache/settings")
                     .display()
                     .to_string(),
             )
             .required(false),
         )
-        .add_source(config::Environment::with_prefix("CACHEME"))
+        .add_source(config::Environment::with_prefix("tokache"))
         .build()
         .unwrap();
 
@@ -99,7 +99,7 @@ fn main() -> Result<()> {
             }
         } else if let Some(expiration_key) = cli.expiration_key {
             let json = fs::read_to_string(&cache_file)
-                .context(format!("Failed to read contect of file {cache_file:?}"))?;
+                .context(format!("Failed to read content of file {cache_file:?}"))?;
             if !is_json_expiered(&json, &expiration_key, now)? {
                 print!("{json}");
                 return Ok(());
